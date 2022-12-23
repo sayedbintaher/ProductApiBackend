@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductAPI.Data;
 using ProductAPI.Models;
+using ProductAPI.Services;
 
 namespace ProductAPI.Controllers
 {
@@ -10,59 +11,55 @@ namespace ProductAPI.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly DataContext _db;
-        public ProductController(DataContext db)
+        private readonly IProductService _productService;
+
+        public ProductController(IProductService productService)
         {
-            _db = db;
+            _productService = productService;
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProductById(int id)
         {
-            return Ok(await _db.Products.FindAsync(id));
+            var product = await _productService.GetProductById(id);
+            if(product == null)
+            {
+                BadRequest("No product found with that Id");
+            }
+            return Ok(product);
         }
 
         [HttpGet]
         public async Task<ActionResult<List<Product>>> GetProducts()
         {
-            return Ok(await _db.Products.ToListAsync());
+            var listProducts = await _productService.GetProducts();
+            return Ok(listProducts);
         }
 
         [HttpPost]
         public async Task<ActionResult<List<Product>>> CreateProduct(Product product)
         {
-            _db.Products.Add(product);
-            await _db.SaveChangesAsync();
-            return Ok(await _db.Products.ToListAsync());
+            var listProducts = await _productService.CreateProduct(product);
+            return Ok(listProducts);
         }
 
         [HttpPut]
         public async Task<ActionResult<Product>> UpdateProduct(Product product)
         {
-            var dbProduct = await _db.Products.FindAsync(product.Id);
+            var dbProduct = await _productService.UpdateProduct(product);
             if(dbProduct == null)
                 return BadRequest("Product Not Found");
-
-            dbProduct.ImageLink = product.ImageLink;
-            dbProduct.Name = product.Name;
-            dbProduct.Description = product.Description;
-            dbProduct.Price = product.Price;
-            dbProduct.Stock= product.Stock;
-
-            await _db.SaveChangesAsync();
             return Ok(dbProduct);
         }
 
         [HttpDelete("{id}")]
         public async Task<ActionResult<List<Product>>> DeleteProduct(int id)
         {
-            var dbProduct = await _db.Products.FindAsync(id);
+            var dbProduct = await _productService.DeleteProduct(id);
             if (dbProduct == null)
                 return BadRequest("Product Not Found");
 
-            _db.Products.Remove(dbProduct);
-            await _db.SaveChangesAsync();
-            return Ok(await _db.Products.ToListAsync());
+            return Ok(dbProduct);
         }
     }
 }
